@@ -8,11 +8,15 @@ from stravalib.client import Client
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# Load environment variables
-load_dotenv()
+# Load environment variables from parent directory
+load_dotenv(os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env'))
 
-TOKEN_FILE = 'strava_tokens.json'
-ACTIVITIES_FILE = 'activities.json'
+# Define paths relative to this script
+SCRIPT_DIR = os.path.dirname(__file__)
+TOKEN_FILE = os.path.join(SCRIPT_DIR, 'strava_tokens.json')
+# Data is in ../data/activities.json
+ACTIVITIES_FILE = os.path.join(os.path.dirname(SCRIPT_DIR), 'data', 'activities.json')
+
 CLIENT_ID = os.getenv('STRAVA_CLIENT_ID')
 CLIENT_SECRET = os.getenv('STRAVA_CLIENT_SECRET')
 

@@ -2,10 +2,11 @@
 .env
 
 # Strava Tokens
-strava_tokens.json
+strava/strava_tokens.json
 
 # Data
-activities.json
+data/activities.json
+data/
 
 # Python
 venv/

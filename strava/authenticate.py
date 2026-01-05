@@ -5,10 +5,14 @@ from dotenv import load_dotenv
 from stravalib.client import Client
 
 # Load environment variables
-load_dotenv()
+# Look for .env in the parent directory
+load_dotenv(os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env'))
 
 CLIENT_ID = os.getenv('STRAVA_CLIENT_ID')
 CLIENT_SECRET = os.getenv('STRAVA_CLIENT_SECRET')
+
+# Token file is in the same directory as this script
+TOKEN_FILE = os.path.join(os.path.dirname(__file__), 'strava_tokens.json')
 
 if not CLIENT_ID or not CLIENT_SECRET:
     print("Error: STRAVA_CLIENT_ID and STRAVA_CLIENT_SECRET must be set in .env file.")
@@ -46,10 +50,10 @@ def authenticate():
             'expires_at': token_response['expires_at']
         }
         
-        with open('strava_tokens.json', 'w') as f:
+        with open(TOKEN_FILE, 'w') as f:
             json.dump(token_data, f, indent=4)
             
-        print("\nAuthentication successful! Tokens saved to 'strava_tokens.json'.")
+        print(f"\nAuthentication successful! Tokens saved to '{TOKEN_FILE}'.")
         
     except Exception as e:
         print(f"\nError during authentication: {e}")
