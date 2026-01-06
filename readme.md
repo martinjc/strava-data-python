@@ -1,6 +1,6 @@
 # Strava Data Python
 
-Tools for authenticating with the Strava API, downloading your activity data, and generating beautiful visualizations.
+Tools for authenticating with the Strava API, downloading your activity data, and generating visualizations.
 
 ## Features
 
