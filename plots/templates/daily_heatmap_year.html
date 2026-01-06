@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Daily Distance Heatmap - Year</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .cell {
+            stroke: #fff;
+            stroke-width: 1px;
+        }
+
+        .axis line,
+        .axis path {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="chart"></div>
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const targetYear = parseInt(params.get("year"));
+
+        const width = 600;
+        const height = 448;
+        const margin = { top: 60, right: 30, bottom: 40, left: 50 };
+        const innerWidth = width - margin.left - margin.right;
+        const innerHeight = height - margin.top - margin.bottom;
+
+        const svg = d3.select("#chart")
+            .append("svg")
+            .attr("width", width)
+            .attr("height", height)
+            .style("background", "white");
+
+        const g = svg.append("g")
+            .attr("transform", `translate(${margin.left},${margin.top})`);
+
+        // Title
+        svg.append("text")
+            .attr("class", "title")
+            .attr("x", margin.left)
+            .attr("y", 40)
+            .text(targetYear ? `Daily distance - ${targetYear}` : "Daily distance");
+
+        if (targetYear) {
+            d3.json("/data/activities.json").then(data => {
+                const parseDate = d3.utcParse("%Y-%m-%dT%H:%M:%SZ");
+
+                // Map: YYYY-MM-DD -> Distance
+                const dailyData = new Map();
+                let maxDistance = 0;
+
+                data.forEach(d => {
+                    if (d.type === "Run") {
+                        const date = parseDate(d.start_date);
+                        if (!date || date.getUTCFullYear() !== targetYear) return;
+
+                        const dayStr = d3.timeFormat("%Y-%m-%d")(date);
+                        const distKm = d.distance / 1000.0;
+                        const val = (dailyData.get(dayStr) || 0) + distKm;
+                        dailyData.set(dayStr, val);
+                        if (val > maxDistance) maxDistance = val;
+                    }
+                });
+
+                // Generate grid for the year
+                const yearStart = new Date(Date.UTC(targetYear, 0, 1));
+                const yearEnd = new Date(Date.UTC(targetYear, 11, 31));
+                const daysInYear = d3.timeDay.range(yearStart, d3.timeDay.offset(yearEnd, 1));
+
+                // Layout:
+                // Y-Axis: Day of Week (0=Sun, 6=Sat) or (1=Mon)? D3 default sun=0.
+                // X-Axis: Week of Year.
+
+                // We need to map each date to a grid position.
+                // x = Week Index
+                // y = Day Index
+
+                const daySize = innerWidth / 54; // Approx cell size
+                const cellSize = Math.min(daySize, innerHeight / 7) - 2;
+
+                // Color
+                const color = d3.scaleSequential(d3.interpolateBlues)
+                    .domain([0, maxDistance || 10]);
+
+                const gridData = daysInYear.map(d => {
+                    const dayStr = d3.timeFormat("%Y-%m-%d")(d);
+                    const val = dailyData.get(dayStr) || 0;
+
+                    // Week Number
+                    const weekNum = +d3.utcFormat("%U")(d);
+                    const dayNum = d.getUTCDay(); // 0-6 Sun-Sat
+
+                    return {
+                        date: d,
+                        week: weekNum,
+                        day: dayNum,
+                        value: val
+                    };
+                });
+
+                g.selectAll(".cell")
+                    .data(gridData)
+                    .join("rect")
+                    .attr("class", "cell")
+                    .attr("x", d => d.week * (cellSize + 1))
+                    .attr("y", d => d.day * (cellSize + 1))
+                    .attr("width", cellSize)
+                    .attr("height", cellSize)
+                    .attr("fill", d => d.value === 0 ? "#f0f0f0" : color(d.value));
+
+                // Y Axis Labels (Days)
+                const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+                g.selectAll(".day-label")
+                    .data(days)
+                    .enter().append("text")
+                    .attr("class", "day-label")
+                    .attr("x", -10)
+                    .attr("y", (d, i) => i * (cellSize + 1) + cellSize / 1.5)
+                    .style("text-anchor", "end")
+                    .style("font-size", "9px")
+                    .text(d => d);
+
+                // X Axis Labels (Months)
+                // Place label roughly at start of month
+                const months = d3.timeMonth.range(yearStart, yearEnd);
+                g.selectAll(".month-label")
+                    .data(months)
+                    .enter().append("text")
+                    .attr("class", "month-label")
+                    .attr("x", d => {
+                        const weekNum = +d3.utcFormat("%U")(d);
+                        return weekNum * (cellSize + 1);
+                    })
+                    .attr("y", 7 * (cellSize + 1) + 15)
+                    .style("font-size", "10px")
+                    .text(d3.timeFormat("%b"));
+
+            }).catch(err => {
+                console.error(err);
+            });
+        }
+    </script>
+</body>
+
+</html>

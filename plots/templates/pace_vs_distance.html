@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Pace vs Distance</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .dot {
+            fill: #4c78a8;
+            opacity: 0.6;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="chart"></div>
+    <script>
+        const width = 600;
+        const height = 448;
+        const margin = { top: 60, right: 30, bottom: 40, left: 50 };
+        const innerWidth = width - margin.left - margin.right;
+        const innerHeight = height - margin.top - margin.bottom;
+
+        const svg = d3.select("#chart")
+            .append("svg")
+            .attr("width", width)
+            .attr("height", height)
+            .style("background", "white");
+
+        const g = svg.append("g")
+            .attr("transform", `translate(${margin.left},${margin.top})`);
+
+        // Title
+        svg.append("text")
+            .attr("class", "title")
+            .attr("x", margin.left)
+            .attr("y", 40)
+            .text("Pace vs Distance - all time");
+
+        // Y Axis Label
+        svg.append("text")
+            .attr("transform", "rotate(-90)")
+            .attr("y", 15)
+            .attr("x", -(height / 2))
+            .style("text-anchor", "middle")
+            .style("font-size", "10px")
+            .text("Pace (min/km)");
+
+        // X Axis Label
+        svg.append("text")
+            .attr("x", width / 2)
+            .attr("y", height - 5)
+            .style("text-anchor", "middle")
+            .style("font-size", "10px")
+            .text("Distance (km)");
+
+        d3.json("/data/activities.json").then(data => {
+
+            // Process Data
+            const runs = [];
+            data.forEach(d => {
+                if (d.type === "Run" && d.distance > 0 && d.moving_time > 0) {
+                    const distKm = d.distance / 1000.0;
+                    const timeMin = d.moving_time / 60.0;
+                    const pace = timeMin / distKm;
+
+                    // Filter out extreme outliers if necessary, but for now keep all valid logic
+                    if (pace > 0 && pace < 30) { // arbitrary upper bound sanity check
+                        runs.push({
+                            distance: distKm,
+                            pace: pace
+                        });
+                    }
+                }
+            });
+
+            // Scales
+            const x = d3.scaleLinear()
+                .domain([0, d3.max(runs, d => d.distance)]).nice()
+                .range([0, innerWidth]);
+
+            const y = d3.scaleLinear()
+                .domain([d3.min(runs, d => d.pace) * 0.9, d3.max(runs, d => d.pace) * 1.1]).nice()
+                .range([0, innerHeight]); // Note: 0 at top for reverse? No, d3 default y range: [height, 0] is bottom-up.
+            // Request: "y axis should be reversed so that faster paces are higher on the chart"
+            // Faster pace = Lower number (e.g. 4 min/km is faster than 6 min/km).
+            // So we want Lower Numbers at the Top (y=0) and Higher Numbers at Bottom (y=height).
+
+            // If range is [0, innerHeight]: 
+            // input min pace -> 0 (Top)
+            // input max pace -> innerHeight (Bottom)
+            // This is exactly what we want.
+
+            // Axes
+            g.append("g")
+                .attr("class", "x-axis")
+                .attr("transform", `translate(0,${innerHeight})`)
+                .call(d3.axisBottom(x));
+
+            g.append("g")
+                .attr("class", "y-axis")
+                .call(d3.axisLeft(y)
+                    .tickFormat(d => {
+                        const m = Math.floor(d);
+                        const s = Math.round((d - m) * 60);
+                        return `${m}:${s < 10 ? "0" + s : s}`;
+                    })
+                );
+
+            // Dots
+            g.selectAll(".dot")
+                .data(runs)
+                .enter().append("circle")
+                .attr("class", "dot")
+                .attr("cx", d => x(d.distance))
+                .attr("cy", d => y(d.pace))
+                .attr("r", 3);
+
+        }).catch(err => {
+            console.error(err);
+        });
+    </script>
+</body>
+
+</html>

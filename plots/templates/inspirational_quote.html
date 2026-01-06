@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Inspirational Quote</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: sans-serif;
+        }
+
+        #chart {
+            width: 600px;
+            height: 448px;
+            position: relative;
+            background-size: cover;
+            background-position: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 40px;
+            box-sizing: border-box;
+        }
+
+        .overlay {
+            background: rgba(0, 0, 0, 0.4);
+            /* Dark overlay for readability */
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 1;
+        }
+
+        .content {
+            position: relative;
+            z-index: 2;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+        }
+
+        .quote {
+            font-size: 28px;
+            font-weight: bold;
+            line-height: 1.4;
+            margin-bottom: 20px;
+        }
+
+        .author {
+            font-size: 18px;
+            font-style: italic;
+            opacity: 0.9;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="chart">
+        <div class="overlay"></div>
+        <div class="content">
+            <div class="quote" id="quote"></div>
+            <div class="author" id="author"></div>
+        </div>
+    </div>
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const image = params.get("image");
+        const quote = params.get("quote");
+        const author = params.get("author");
+        const font = params.get("font");
+
+        const chart = document.getElementById("chart");
+        if (image) {
+            chart.style.backgroundImage = `url('/running-images/${image}')`;
+        }
+
+        if (font) {
+            document.body.style.fontFamily = font;
+        }
+
+        document.getElementById("quote").innerText = quote || "No quote provided";
+        document.getElementById("author").innerText = author ? `— ${author}` : "";
+    </script>
+</body>
+
+</html>

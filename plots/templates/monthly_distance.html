@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Monthly Distance</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .bar {
+            fill: #4c78a8;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="chart"></div>
+    <script>
+        // Dimensions
+        const width = 600;
+        const height = 448;
+        const margin = { top: 60, right: 30, bottom: 40, left: 50 };
+        const innerWidth = width - margin.left - margin.right;
+        const innerHeight = height - margin.top - margin.bottom;
+
+        // Create SVG
+        const svg = d3.select("#chart")
+            .append("svg")
+            .attr("width", width)
+            .attr("height", height)
+            .style("background", "white");
+
+        const g = svg.append("g")
+            .attr("transform", `translate(${margin.left},${margin.top})`);
+
+        // Add Title
+        svg.append("text")
+            .attr("class", "title")
+            .attr("x", margin.left)
+            .attr("y", 40) // Position in top margin
+            .text("Distance per month - all time");
+
+        // Y Axis Label
+        svg.append("text")
+            .attr("transform", "rotate(-90)")
+            .attr("y", 15)
+            .attr("x", -(height / 2))
+            .style("text-anchor", "middle")
+            .style("font-size", "10px")
+            .text("Distance (km)");
+
+        // Fetch Data
+        d3.json("/data/activities.json").then(data => {
+            // Process Data
+            // 1. Parse dates and filter types if needed (assuming all runs/rides count, or just filter runs?)
+            // Python version filtered for 'Run'. Let's do same.
+
+            const parseDate = d3.utcParse("%Y-%m-%dT%H:%M:%SZ");
+            const formatMonthInfo = d3.timeFormat("%Y-%m"); // For Keys
+
+            const monthlyDataMap = new Map();
+            let minDate = new Date();
+            let maxDate = new Date(0);
+
+            data.forEach(d => {
+                if (d.type === "Run") {
+                    const date = parseDate(d.start_date);
+                    if (!date) return;
+
+                    if (date < minDate) minDate = date;
+                    if (date > maxDate) maxDate = date;
+
+                    // Key by Month Start (Year-Month-01)
+                    // Construct a date object for the 1st of the month
+                    const monthKey = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1));
+                    const keyStr = monthKey.toISOString();
+
+                    const current = monthlyDataMap.get(keyStr) || 0;
+                    monthlyDataMap.set(keyStr, current + d.distance);
+                }
+            });
+
+            // Fill in missing months?
+            // Python version resampled 'MS', so yes, we should fill gaps.
+            const months = d3.timeMonth.range(d3.timeMonth.floor(minDate), d3.timeMonth.ceil(maxDate));
+
+            const processedData = months.map(m => {
+                const keyStr = new Date(Date.UTC(m.getUTCFullYear(), m.getUTCMonth(), 1)).toISOString();
+                const distMeters = monthlyDataMap.get(keyStr) || 0;
+                return {
+                    date: m,
+                    distance: distMeters / 1000.0 // km
+                };
+            });
+
+            // Scales
+            // X: Band scale for uniform width
+            const x = d3.scaleBand()
+                .domain(processedData.map(d => d.date))
+                .range([0, innerWidth])
+                .padding(0.05); // Small gap (95% width)
+
+            // Y: Linear
+            const y = d3.scaleLinear()
+                .domain([0, d3.max(processedData, d => d.distance)]).nice()
+                .range([innerHeight, 0]);
+
+            // Bars
+            g.selectAll(".bar")
+                .data(processedData)
+                .join("rect")
+                .attr("class", "bar")
+                .attr("x", d => x(d.date))
+                .attr("y", d => y(d.distance))
+                .attr("width", x.bandwidth())
+                .attr("height", d => innerHeight - y(d.distance));
+
+            // Axes
+            // X Axis: Years only, every 2 years
+            const xAxis = d3.axisBottom(x)
+                .tickValues(x.domain().filter(d => d.getUTCMonth() === 0 && d.getUTCFullYear() % 2 === 0))
+                .tickFormat(d3.timeFormat("%Y"));
+
+            g.append("g")
+                .attr("class", "x-axis")
+                .attr("transform", `translate(0,${innerHeight})`)
+                .call(xAxis);
+
+            // Y Axis
+            g.append("g")
+                .attr("class", "y-axis")
+                .call(d3.axisLeft(y).ticks(5));
+
+        }).catch(err => {
+            console.error("Error loading data:", err);
+            d3.select("#chart").append("div").text("Error loading data: " + err);
+        });
+    </script>
+</body>
+
+</html>

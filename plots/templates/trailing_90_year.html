@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Trailing 90 Days Distance - Year</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .line {
+            fill: none;
+            stroke: #4c78a8;
+            stroke-width: 1.5;
+        }
+
+        .axis line,
+        .axis path {
+            stroke: #e0e0e0;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="chart"></div>
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const targetYear = parseInt(params.get("year"));
+
+        const width = 600;
+        const height = 448;
+        const margin = { top: 60, right: 30, bottom: 40, left: 50 };
+        const innerWidth = width - margin.left - margin.right;
+        const innerHeight = height - margin.top - margin.bottom;
+
+        const svg = d3.select("#chart")
+            .append("svg")
+            .attr("width", width)
+            .attr("height", height)
+            .style("background", "white");
+
+        const g = svg.append("g")
+            .attr("transform", `translate(${margin.left},${margin.top})`);
+
+        svg.append("text")
+            .attr("class", "title")
+            .attr("x", margin.left)
+            .attr("y", 40)
+            .text(targetYear ? `Trailing 90 day distance - ${targetYear}` : "Trailing 90 day distance");
+
+        svg.append("text")
+            .attr("transform", "rotate(-90)")
+            .attr("y", 15)
+            .attr("x", -(height / 2))
+            .style("text-anchor", "middle")
+            .style("font-size", "10px")
+            .text("Distance (km)");
+
+        if (targetYear) {
+            d3.json("/data/activities.json").then(data => {
+                const parseDate = d3.utcParse("%Y-%m-%dT%H:%M:%SZ");
+
+                // Need data from Previous Year as well to calculate rolling start correctly
+                const minNeededDate = new Date(Date.UTC(targetYear - 1, 9, 1)); // Roughly 90 days before Jan 1
+
+                let runs = data
+                    .filter(d => d.type === "Run")
+                    .map(d => ({ date: parseDate(d.start_date), distance: d.distance }))
+                    .filter(d => d.date && d.date >= minNeededDate && d.date.getUTCFullYear() <= targetYear);
+
+                // Daily Aggregation
+                const dailyMap = new Map();
+                runs.forEach(d => {
+                    const dayStr = d3.timeFormat("%Y-%m-%d")(d.date);
+                    dailyMap.set(dayStr, (dailyMap.get(dayStr) || 0) + d.distance);
+                });
+
+                // Generate range for the target year ONLY for X-Axis
+                const yearStart = new Date(Date.UTC(targetYear, 0, 1));
+                const yearEnd = new Date(Date.UTC(targetYear, 11, 31));
+                const daysInYear = d3.timeDay.range(yearStart, d3.timeDay.offset(yearEnd, 1));
+
+                // But for rolling calc, we need to iterate internally with history
+                // Let's create a helper to get distance for any date
+                const getDailyDist = (d) => {
+                    const dayStr = d3.timeFormat("%Y-%m-%d")(d);
+                    return dailyMap.get(dayStr) || 0;
+                };
+
+                // Calculate rolling 90 for each day of the target year
+                const rollingData = daysInYear.map(day => {
+                    // Stop calculating if date is in future
+                    if (day > new Date()) return null;
+
+                    // Sum from day-90 to day (exclusive or inclusive? usually window size)
+                    // "Trailing 90 days" -> Sum of [day-89, day] i.e. 90 days total including today?
+
+                    let sum = 0;
+                    // Inefficient but simple loop for 365 points * 90 lookback = ~32k ops, fine.
+                    for (let i = 0; i < 90; i++) {
+                        const lookbackDate = d3.timeDay.offset(day, -i);
+                        sum += getDailyDist(lookbackDate);
+                    }
+
+                    return {
+                        date: day,
+                        distance: sum / 1000.0
+                    };
+                }).filter(d => d !== null);
+
+                // Scales
+                const x = d3.scaleTime()
+                    .domain([yearStart, yearEnd])
+                    .range([0, innerWidth]);
+
+                const y = d3.scaleLinear()
+                    .domain([0, d3.max(rollingData, d => d.distance)]).nice()
+                    .range([innerHeight, 0]);
+
+                const line = d3.line()
+                    .x(d => x(d.date))
+                    .y(d => y(d.distance));
+
+                g.append("path")
+                    .datum(rollingData)
+                    .attr("class", "line")
+                    .attr("d", line);
+
+                // Axes
+                const xAxis = d3.axisBottom(x).tickFormat(d3.timeFormat("%b"));
+
+                g.append("g")
+                    .attr("class", "x-axis")
+                    .attr("transform", `translate(0,${innerHeight})`)
+                    .call(xAxis);
+
+                g.append("g")
+                    .attr("class", "y-axis")
+                    .call(d3.axisLeft(y).ticks(5));
+
+            }).catch(err => {
+                console.error(err);
+            });
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Personal Records</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .table-container {
+            position: absolute;
+            top: 70px;
+            left: 30px;
+            width: 540px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
+        }
+
+        th {
+            text-align: left;
+            border-bottom: 2px solid #ccc;
+            padding: 5px;
+            color: #666;
+            text-transform: uppercase;
+        }
+
+        td {
+            padding: 6px 5px;
+            border-bottom: 1px solid #eee;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        .title {
+            position: absolute;
+            top: 40px;
+            left: 30px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="chart">
+        <div class="title" id="page-title">Personal Records</div>
+        <div class="table-container">
+            <table id="pr-table">
+                <thead>
+                    <tr>
+                        <th>Distance</th>
+                        <th>Date</th>
+                        <th>Time</th>
+                        <th>Pace</th>
+                        <th>Speed</th>
+                        <th>Count</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Rows will be added here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const targetYear = parseInt(params.get("year"));
+
+        // Update Title
+        if (targetYear) {
+            d3.select("#page-title").text(`Personal Records - ${targetYear}`);
+        } else {
+            d3.select("#page-title").text(`Personal Records - All Time`);
+        }
+
+        d3.json("/data/activities.json").then(data => {
+            const parseDate = d3.utcParse("%Y-%m-%dT%H:%M:%SZ");
+            const formatDate = d3.timeFormat("%d %b %Y");
+
+            // Filter Runs
+            let runs = data
+                .filter(d => d.type === "Run")
+                .map(d => ({
+                    ...d,
+                    date: parseDate(d.start_date)
+                }))
+                .filter(d => d.date);
+
+            if (targetYear) {
+                runs = runs.filter(d => d.date.getUTCFullYear() === targetYear);
+            }
+
+            // Distances to check (Meters)
+            // Margin of error: Let's say +/- 2.5% ? Or fixed meters?
+            // "we can allow runs within a margin of error"
+            // Let's use 2% tolerance.
+
+            const buckets = [
+                { name: "1 Mile", dist: 1609.34, tolerance: 0.05 }, // 5% for mile 
+                { name: "3 km", dist: 3000, tolerance: 0.02 },
+                { name: "5 km", dist: 5000, tolerance: 0.02 }, // Strava usually matches 5k pretty tightly
+                { name: "5 Miles", dist: 8046.72, tolerance: 0.02 },
+                { name: "10 km", dist: 10000, tolerance: 0.02 },
+                { name: "15 km", dist: 15000, tolerance: 0.02 },
+                { name: "10 Miles", dist: 16093.4, tolerance: 0.02 },
+                { name: "Half Marathon", dist: 21097.5, tolerance: 0.02 }
+            ];
+
+            const tbody = d3.select("#pr-table tbody");
+
+            buckets.forEach(b => {
+                const min = b.dist * (1 - b.tolerance);
+                const max = b.dist * (1 + b.tolerance);
+
+                const matches = runs.filter(d => d.distance >= min && d.distance <= max);
+
+                if (matches.length > 0) {
+                    // Find Fastest (Sort by moving_time)
+                    matches.sort((a, b) => a.moving_time - b.moving_time);
+                    const pr = matches[0];
+
+                    // Calculations
+                    const timeSec = pr.moving_time;
+                    const hh = Math.floor(timeSec / 3600);
+                    const mm = Math.floor((timeSec % 3600) / 60);
+                    const ss = Math.round(timeSec % 60);
+                    const timeStr = hh > 0
+                        ? `${hh}:${mm < 10 ? '0' + mm : mm}:${ss < 10 ? '0' + ss : ss}`
+                        : `${mm}:${ss < 10 ? '0' + ss : ss}`;
+
+                    const speedKmh = (pr.average_speed * 3.6).toFixed(1); // m/s to km/h
+                    const paceMinKm = 1000 / (pr.average_speed * 60); // min/km
+                    // Wait, average_speed is m/s. 
+                    // 1 / (speed/1000) sec/km = 1000/speed sec/km.
+                    // pace = (1000/speed)/60 min/km
+                    // Easier: timeMin / distKm
+                    const distKm = pr.distance / 1000.0;
+                    const paceVal = (timeSec / 60) / distKm;
+                    const pm = Math.floor(paceVal);
+                    const ps = Math.round((paceVal - pm) * 60);
+                    const paceStr = `${pm}:${ps < 10 ? '0' + ps : ps} /km`;
+
+                    const row = tbody.append("tr");
+                    row.append("td").text(b.name).style("font-weight", "bold");
+                    row.append("td").text(formatDate(pr.date));
+                    row.append("td").text(timeStr);
+                    row.append("td").text(paceStr);
+                    row.append("td").text(`${speedKmh} km/h`);
+                    row.append("td").text(matches.length);
+                }
+            });
+
+            if (tbody.selectAll("tr").size() === 0) {
+                tbody.append("tr").append("td").attr("colspan", 6).text("No matches found for this period");
+            }
+
+        }).catch(err => {
+            console.error(err);
+        });
+    </script>
+</body>
+
+</html>

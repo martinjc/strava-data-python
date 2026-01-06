@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Area Map</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .title {
+            position: absolute;
+            top: 40px;
+            left: 30px;
+        }
+
+        .content-container {
+            display: flex;
+            position: absolute;
+            top: 80px;
+            left: 30px;
+            width: 540px;
+            height: 338px;
+        }
+
+        .map-container {
+            flex: 1;
+        }
+
+        .stats-container {
+            flex: 0 0 200px;
+            padding-left: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+        }
+
+        .route-path {
+            fill: none;
+            stroke: #fc4c02;
+            stroke-width: 1.5px;
+            stroke-opacity: 0.3;
+            /* Low opacity to show density */
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .stat-item {
+            margin-bottom: 20px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="chart">
+        <div class="title" id="page-title">Run Density</div>
+        <div class="content-container">
+            <div class="map-container" id="map"></div>
+            <div class="stats-container" id="stats"></div>
+        </div>
+    </div>
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const targetYear = parseInt(params.get("year"));
+
+        // Bounding Box
+        // [[-3.32322, 51.38586], [-3.14065, 51.51634]]
+        // Approx breakdown: MinLng, MinLat, MaxLng, MaxLat
+        const bbox = {
+            minLng: -3.32322,
+            minLat: 51.38586,
+            maxLng: -3.14065,
+            maxLat: 51.51634
+        };
+
+        // Polyline Decoder
+        function decode(str, precision) {
+            var index = 0, lat = 0, lng = 0, coordinates = [], shift = 0, result = 0, byte = null, latitude_change, longitude_change, factor = Math.pow(10, precision || 5);
+            while (index < str.length) {
+                byte = null; shift = 0; result = 0;
+                do { byte = str.charCodeAt(index++) - 63; result |= (byte & 0x1f) << shift; shift += 5; } while (byte >= 0x20);
+                latitude_change = ((result & 1) ? ~(result >> 1) : (result >> 1));
+                shift = result = 0;
+                do { byte = str.charCodeAt(index++) - 63; result |= (byte & 0x1f) << shift; shift += 5; } while (byte >= 0x20);
+                longitude_change = ((result & 1) ? ~(result >> 1) : (result >> 1));
+                lat += latitude_change; lng += longitude_change;
+                coordinates.push([lat / factor, lng / factor]);
+            }
+            return coordinates;
+        }
+
+        function toGeoJSON(str) {
+            const coords = decode(str);
+            return {
+                type: "LineString",
+                coordinates: coords.map(c => [c[1], c[0]])
+            };
+        }
+
+        d3.select("#page-title").text(targetYear ? `Cardiff Runs - ${targetYear}` : "Cardiff Runs - All Time");
+
+        d3.json("/data/activities.json").then(data => {
+            const parseDate = d3.utcParse("%Y-%m-%dT%H:%M:%SZ");
+
+            const runs = data.filter(d => {
+                if (d.type !== "Run") return false;
+                if (!d.map || !d.map.summary_polyline) return false;
+                if (!d.start_latlng || d.start_latlng.length < 2) return false;
+
+                // Check Year
+                if (targetYear) {
+                    const date = parseDate(d.start_date);
+                    if (date.getUTCFullYear() !== targetYear) return false;
+                }
+
+                // Check Bounding Box (Start Location)
+                const lat = d.start_latlng[0];
+                const lng = d.start_latlng[1];
+
+                return lat >= bbox.minLat && lat <= bbox.maxLat &&
+                    lng >= bbox.minLng && lng <= bbox.maxLng;
+            });
+
+            // Calculate Stats
+            const totalDistKm = d3.sum(runs, d => d.distance) / 1000.0;
+            const count = runs.length;
+            const avgDistKm = count > 0 ? totalDistKm / count : 0;
+
+            // Avg Pace
+            // Total Time / Total Dist ? Or avg of paces? Weighted avg is Total Time / Total Dist
+            const totalTimeMin = d3.sum(runs, d => d.moving_time) / 60.0;
+            const avgPaceDec = totalDistKm > 0 ? totalTimeMin / totalDistKm : 0;
+
+            const pm = Math.floor(avgPaceDec);
+            const ps = Math.round((avgPaceDec - pm) * 60);
+            const paceStr = `${pm}:${ps < 10 ? '0' + ps : ps} /km`;
+
+            // Render Stats
+            const statsDiv = d3.select("#stats");
+
+            statsDiv.append("div").attr("class", "stat-item")
+                .html(`<div class="stat-label">Total Distance</div><div class="stat-value">${totalDistKm.toFixed(0)} <span style="font-size:14px; font-weight:normal;">km</span></div>`);
+
+            statsDiv.append("div").attr("class", "stat-item")
+                .html(`<div class="stat-label">Run Count</div><div class="stat-value">${count}</div>`);
+
+            statsDiv.append("div").attr("class", "stat-item")
+                .html(`<div class="stat-label">Avg Distance</div><div class="stat-value">${avgDistKm.toFixed(1)} <span style="font-size:14px; font-weight:normal;">km</span></div>`);
+
+            statsDiv.append("div").attr("class", "stat-item")
+                .html(`<div class="stat-label">Avg Pace</div><div class="stat-value">${paceStr}</div>`);
+
+
+            // Map
+            const mapContainer = d3.select("#map");
+            const width = mapContainer.node().getBoundingClientRect().width;
+            const height = mapContainer.node().getBoundingClientRect().height;
+
+            const svg = mapContainer.append("svg")
+                .attr("width", width)
+                .attr("height", height);
+
+            if (count > 0) {
+                // Projection fitted to BBOX
+                // We create a GeoJSON FeatureCollection of the BBOX corners to fit the projection consistently to the AREA, not just the runs.
+                // Or do we want to fit the runs? "Find all runs ... within bounding box ... map of all the runs".
+                // Usually better to fit the BBOX so the context is the area requested.
+
+                const bboxFeature = {
+                    type: "Feature",
+                    geometry: {
+                        type: "Polygon",
+                        coordinates: [[
+                            [bbox.minLng, bbox.minLat],
+                            [bbox.maxLng, bbox.minLat],
+                            [bbox.maxLng, bbox.maxLat],
+                            [bbox.minLng, bbox.maxLat],
+                            [bbox.minLng, bbox.minLat]
+                        ]]
+                    }
+                };
+
+                const projection = d3.geoIdentity().reflectY(true);
+                projection.fitExtent([[10, 10], [width - 10, height - 10]], bboxFeature);
+                const path = d3.geoPath(projection);
+
+                // Render all paths
+                runs.forEach(d => {
+                    const geojson = toGeoJSON(d.map.summary_polyline);
+                    svg.append("path")
+                        .datum(geojson)
+                        .attr("class", "route-path")
+                        .attr("d", path);
+                });
+            } else {
+                svg.append("text")
+                    .attr("x", width / 2)
+                    .attr("y", height / 2)
+                    .attr("text-anchor", "middle")
+                    .text("No runs found in this area");
+            }
+
+        }).catch(err => {
+            console.error(err);
+        });
+    </script>
+</body>
+
+</html>

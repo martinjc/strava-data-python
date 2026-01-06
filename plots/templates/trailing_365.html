@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Trailing 365 Days Distance</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .line {
+            fill: none;
+            stroke: #4c78a8;
+            stroke-width: 1.5;
+        }
+
+        .grid line {
+            stroke: #e0e0e0;
+            stroke-opacity: 0.7;
+            shape-rendering: crispEdges;
+        }
+
+        .grid path {
+            stroke-width: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="chart"></div>
+    <script>
+        const width = 600;
+        const height = 448;
+        const margin = { top: 60, right: 30, bottom: 40, left: 50 };
+        const innerWidth = width - margin.left - margin.right;
+        const innerHeight = height - margin.top - margin.bottom;
+
+        const svg = d3.select("#chart")
+            .append("svg")
+            .attr("width", width)
+            .attr("height", height)
+            .style("background", "white");
+
+        const g = svg.append("g")
+            .attr("transform", `translate(${margin.left},${margin.top})`);
+
+        svg.append("text")
+            .attr("class", "title")
+            .attr("x", margin.left)
+            .attr("y", 40)
+            .text("Trailing 365 day distance - all time");
+
+        svg.append("text")
+            .attr("transform", "rotate(-90)")
+            .attr("y", 15)
+            .attr("x", -(height / 2))
+            .style("text-anchor", "middle")
+            .style("font-size", "10px")
+            .text("Distance (km)");
+
+        d3.json("/data/activities.json").then(data => {
+            const parseDate = d3.utcParse("%Y-%m-%dT%H:%M:%SZ");
+
+            // 1. Process Data: Filter Runs and parse dates
+            let runs = data
+                .filter(d => d.type === "Run")
+                .map(d => ({ date: parseDate(d.start_date), distance: d.distance }))
+                .filter(d => d.date); // valid dates
+
+            if (runs.length === 0) return;
+
+            // 2. Daily aggregation (fill missing days)
+            // Map: DateString -> Distance
+            const dailyMap = new Map();
+            runs.forEach(d => {
+                const dayStr = d3.timeFormat("%Y-%m-%d")(d.date);
+                dailyMap.set(dayStr, (dailyMap.get(dayStr) || 0) + d.distance);
+            });
+
+            // Range
+            runs.sort((a, b) => a.date - b.date);
+            const minDate = runs[0].date;
+            const maxDate = runs[runs.length - 1].date;
+
+            const days = d3.timeDay.range(d3.timeDay.floor(minDate), d3.timeDay.ceil(maxDate));
+
+            const dailyData = days.map(d => {
+                const dayStr = d3.timeFormat("%Y-%m-%d")(d);
+                return {
+                    date: d,
+                    distance: dailyMap.get(dayStr) || 0
+                };
+            });
+
+            // 3. Rolling 365 Sum
+            const windowSize = 365;
+            const rollingData = [];
+
+            // Optimization: Sliding window sum
+            // However, dates might not be perfectly continuous if range logic failed? 
+            // d3.timeDay.range ensures continuity.
+
+            let currentSum = 0;
+            // First 365 days logic: sum available history? Or strict window?
+            // "so the total distance covered in the 365 days prior to each date"
+
+            // We can pre-calculate sums or use a loop.
+            // window is [i - 365, i]. 
+
+            for (let i = 0; i < dailyData.length; i++) {
+                currentSum += dailyData[i].distance;
+                if (i >= windowSize) {
+                    currentSum -= dailyData[i - windowSize].distance;
+                }
+
+                rollingData.push({
+                    date: dailyData[i].date,
+                    distance: currentSum / 1000.0 // km
+                });
+            }
+
+            // Scales
+            const x = d3.scaleTime()
+                .domain(d3.extent(rollingData, d => d.date))
+                .range([0, innerWidth]);
+
+            const y = d3.scaleLinear()
+                .domain([0, d3.max(rollingData, d => d.distance)]).nice()
+                .range([innerHeight, 0]);
+
+            // Line
+            const line = d3.line()
+                .x(d => x(d.date))
+                .y(d => y(d.distance));
+
+            g.append("path")
+                .datum(rollingData)
+                .attr("class", "line")
+                .attr("d", line);
+
+            // Axes
+            g.append("g")
+                .attr("class", "x-axis")
+                .attr("transform", `translate(0,${innerHeight})`)
+                .call(d3.axisBottom(x));
+
+            g.append("g")
+                .attr("class", "y-axis")
+                .call(d3.axisLeft(y));
+
+        }).catch(err => {
+            console.error(err);
+        });
+    </script>
+</body>
+
+</html>

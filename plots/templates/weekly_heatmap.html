@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Weekly Distance Heatmap</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .cell {
+            stroke: #fff;
+            stroke-width: 1px;
+        }
+
+        .axis text {
+            font-size: 10px;
+            fill: #333;
+        }
+
+        .axis line,
+        .axis path {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="chart"></div>
+    <script>
+        const width = 600;
+        const height = 448;
+        const margin = { top: 60, right: 30, bottom: 40, left: 50 };
+        const innerWidth = width - margin.left - margin.right;
+        const innerHeight = height - margin.top - margin.bottom;
+
+        const svg = d3.select("#chart")
+            .append("svg")
+            .attr("width", width)
+            .attr("height", height)
+            .style("background", "white");
+
+        const g = svg.append("g")
+            .attr("transform", `translate(${margin.left},${margin.top})`);
+
+        // Title
+        svg.append("text")
+            .attr("class", "title")
+            .attr("x", margin.left)
+            .attr("y", 40)
+            .text("Weekly Distance Heatmap - all time");
+
+        d3.json("/data/activities.json").then(data => {
+            const parseDate = d3.utcParse("%Y-%m-%dT%H:%M:%SZ");
+
+            // Process Data
+            // Map: "Year-Week" -> Distance
+            const weeklyData = new Map();
+            let minYear = 9999;
+            let maxYear = 0;
+            let maxDistance = 0;
+
+            data.forEach(d => {
+                if (d.type === "Run") {
+                    const date = parseDate(d.start_date);
+                    if (!date) return;
+
+                    const year = date.getUTCFullYear();
+                    const week = d3.utcFormat("%U")(date); // 00-53
+                    const key = `${year}-${week}`;
+
+                    const distKm = d.distance / 1000.0;
+                    const val = (weeklyData.get(key) || 0) + distKm;
+                    weeklyData.set(key, val);
+
+                    if (year < minYear) minYear = year;
+                    if (year > maxYear) maxYear = year;
+                    if (val > maxDistance) maxDistance = val;
+                }
+            });
+
+            if (maxYear === 0) return; // No data
+
+            const years = d3.range(minYear, maxYear + 1);
+            const weeks = d3.range(0, 54); // Weeks 0-53
+
+            // Scales
+            // X: Weeks
+            const x = d3.scaleBand()
+                .domain(weeks)
+                .range([0, innerWidth])
+                .padding(0.05);
+
+            // Y: Years
+            const y = d3.scaleBand()
+                .domain(years)
+                .range([0, innerHeight]) // Top to bottom (minYear at top)
+                // Wait, typically calendars show reverse chronological? Or chronological?
+                // Let's do standard list: Min Year at Top or Bottom?
+                // Usually heatmaps: Top row = Year 1, Bottom = Year N. 
+                // Let's put MinYear at Top.
+                .padding(0.05);
+
+            // Color
+            const color = d3.scaleSequential(d3.interpolateBlues)
+                .domain([0, maxDistance]);
+
+            // Render Cells
+            // Iterate all Year-Weeks to fill grid (even empty ones)
+            const gridData = [];
+            years.forEach(year => {
+                weeks.forEach(week => {
+                    // Pad week to 2 digits for key consistency if used %U
+                    const weekStr = week < 10 ? "0" + week : "" + week;
+                    const key = `${year}-${weekStr}`;
+                    const val = weeklyData.get(key) || 0;
+
+                    gridData.push({
+                        year: year,
+                        week: week,
+                        value: val
+                    });
+                });
+            });
+
+            g.selectAll(".cell")
+                .data(gridData)
+                .join("rect")
+                .attr("class", "cell")
+                .attr("x", d => x(d.week))
+                .attr("y", d => y(d.year))
+                .attr("width", x.bandwidth())
+                .attr("height", y.bandwidth())
+                .attr("fill", d => d.value === 0 ? "#f0f0f0" : color(d.value))
+                .append("title")
+                .text(d => `Year: ${d.year}, Week: ${d.week}, Dist: ${d.value.toFixed(1)} km`);
+
+            // Axes
+            // Y Axis: Years
+            const yAxis = d3.axisLeft(y).tickSize(0);
+            g.append("g")
+                .attr("class", "axis")
+                .call(yAxis)
+                .select(".domain").remove();
+
+            // X Axis: Months
+            // We use a generic 2020 (leap year) to map weeks to months approximately
+            const timeScale = d3.scaleTime()
+                .domain([new Date(2020, 0, 1), new Date(2020, 11, 31)])
+                .range([0, innerWidth]);
+
+            const xAxis = d3.axisBottom(timeScale)
+                .ticks(d3.timeMonth.every(1))
+                .tickFormat(d3.timeFormat("%b"))
+                .tickSize(0);
+
+            g.append("g")
+                .attr("class", "axis")
+                .attr("transform", `translate(0,${innerHeight})`)
+                .call(xAxis)
+                .select(".domain").remove();
+
+        }).catch(err => {
+            console.error(err);
+        });
+    </script>
+</body>
+
+</html>
