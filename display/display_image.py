@@ -28,7 +28,7 @@ def generate_new_quote():
     """Runs the generate_quote.py script to create a new inspirational quote image."""
     print("Generating new inspirational quote...")
     try:
-        subprocess.run(["python", QUOTE_GENERATOR], check=True, cwd=ROOT_DIR)
+        subprocess.run([sys.executable, QUOTE_GENERATOR], check=True, cwd=ROOT_DIR)
         return os.path.join(PLOTS_DIR, QUOTE_IMAGE_NAME)
     except subprocess.CalledProcessError as e:
         print(f"Error generating quote: {e}")
