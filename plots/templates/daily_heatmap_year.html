@@ -27,6 +27,7 @@
 
         const width = 600;
         const height = 448;
+        // Standard margins matching other plots
         const margin = { top: 60, right: 30, bottom: 40, left: 50 };
         const innerWidth = width - margin.left - margin.right;
         const innerHeight = height - margin.top - margin.bottom;
@@ -44,7 +45,7 @@
         svg.append("text")
             .attr("class", "title")
             .attr("x", margin.left)
-            .attr("y", 40)
+            .attr("y", 40) // Standard title position
             .text(targetYear ? `Daily distance - ${targetYear}` : "Daily distance");
 
         if (targetYear) {
@@ -73,34 +74,40 @@
                 const yearEnd = new Date(Date.UTC(targetYear, 11, 31));
                 const daysInYear = d3.timeDay.range(yearStart, d3.timeDay.offset(yearEnd, 1));
 
-                // Layout:
-                // Y-Axis: Day of Week (0=Sun, 6=Sat) or (1=Mon)? D3 default sun=0.
-                // X-Axis: Week of Year.
+                // Layout Config: 2 Rows (Jan-Jun, Jul-Dec)
+                const rows = 2;
+                const weeksPerRow = 27; // 53 weeks / 2 ~= 26.5
 
-                // We need to map each date to a grid position.
-                // x = Week Index
-                // y = Day Index
+                // Add padding inside the chart area to separate from title
+                const topPadding = 20;
+                const availableHeight = innerHeight - topPadding;
 
-                const daySize = innerWidth / 54; // Approx cell size
-                const cellSize = Math.min(daySize, innerHeight / 7) - 2;
+                // Calculate Cell Size
+                const cellW = Math.floor(innerWidth / weeksPerRow);
+                const cellH = Math.floor(availableHeight / (rows * 10)); // 7 days + 3 for gap
+                const cellSize = Math.min(cellW, cellH) - 1;
+
+                const rowGap = cellSize * 3; // Gap between half-years
 
                 // Color
                 const color = d3.scaleSequential(d3.interpolateBlues)
                     .domain([0, maxDistance || 10]);
 
                 const gridData = daysInYear.map(d => {
-                    const dayStr = d3.timeFormat("%Y-%m-%d")(d);
-                    const val = dailyData.get(dayStr) || 0;
-
-                    // Week Number
-                    const weekNum = +d3.utcFormat("%U")(d);
+                    const val = dailyData.get(d3.timeFormat("%Y-%m-%d")(d)) || 0;
+                    const weekNumRaw = +d3.utcFormat("%U")(d);
                     const dayNum = d.getUTCDay(); // 0-6 Sun-Sat
+
+                    // Determine visual row (0 or 1)
+                    const rowIdx = Math.floor(weekNumRaw / weeksPerRow);
+                    const colIdx = weekNumRaw % weeksPerRow;
 
                     return {
                         date: d,
-                        week: weekNum,
-                        day: dayNum,
-                        value: val
+                        val: val,
+                        row: rowIdx,
+                        col: colIdx,
+                        day: dayNum
                     };
                 });
 
@@ -108,26 +115,30 @@
                     .data(gridData)
                     .join("rect")
                     .attr("class", "cell")
-                    .attr("x", d => d.week * (cellSize + 1))
-                    .attr("y", d => d.day * (cellSize + 1))
+                    .attr("x", d => d.col * (cellSize + 1))
+                    // Apply topPadding to Y coordinate
+                    .attr("y", d => topPadding + (d.row * (7 * (cellSize + 1) + rowGap)) + (d.day * (cellSize + 1)))
                     .attr("width", cellSize)
                     .attr("height", cellSize)
-                    .attr("fill", d => d.value === 0 ? "#f0f0f0" : color(d.value));
+                    .attr("fill", d => d.val === 0 ? "#f0f0f0" : color(d.val));
 
-                // Y Axis Labels (Days)
-                const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-                g.selectAll(".day-label")
-                    .data(days)
-                    .enter().append("text")
-                    .attr("class", "day-label")
-                    .attr("x", -10)
-                    .attr("y", (d, i) => i * (cellSize + 1) + cellSize / 1.5)
-                    .style("text-anchor", "end")
-                    .style("font-size", "9px")
-                    .text(d => d);
+                // Labels
+                // Day Labels (Sun, Tue, Thu, Sat) - Render for each row
+                const dayLabels = ["Sun", "", "Tue", "", "Thu", "", "Sat"];
+                for (let r = 0; r < rows; r++) {
+                    const yOffset = topPadding + r * (7 * (cellSize + 1) + rowGap);
+                    g.selectAll(`.day-label-${r}`)
+                        .data(dayLabels)
+                        .enter().append("text")
+                        .attr("class", "day-label")
+                        .attr("x", -5)
+                        .attr("y", (d, i) => yOffset + i * (cellSize + 1) + cellSize / 1.5)
+                        .style("text-anchor", "end")
+                        .style("font-size", "9px")
+                        .text(d => d);
+                }
 
-                // X Axis Labels (Months)
-                // Place label roughly at start of month
+                // Month Labels
                 const months = d3.timeMonth.range(yearStart, yearEnd);
                 g.selectAll(".month-label")
                     .data(months)
@@ -135,10 +146,20 @@
                     .attr("class", "month-label")
                     .attr("x", d => {
                         const weekNum = +d3.utcFormat("%U")(d);
-                        return weekNum * (cellSize + 1);
+                        const rowIdx = Math.floor(weekNum / weeksPerRow);
+                        const colIdx = weekNum % weeksPerRow;
+                        // Correct x position for the specific row
+                        return colIdx * (cellSize + 1);
                     })
-                    .attr("y", 7 * (cellSize + 1) + 15)
+                    .attr("y", d => {
+                        const weekNum = +d3.utcFormat("%U")(d);
+                        const rowIdx = Math.floor(weekNum / weeksPerRow);
+                        // Place ABOVE the block, including topPadding
+                        const yOffset = topPadding + rowIdx * (7 * (cellSize + 1) + rowGap);
+                        return yOffset - 5;
+                    })
                     .style("font-size", "10px")
+                    .style("font-weight", "bold")
                     .text(d3.timeFormat("%b"));
 
             }).catch(err => {
