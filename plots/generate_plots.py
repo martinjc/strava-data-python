@@ -3,6 +3,8 @@ import time
 import threading
 import subprocess
 import sys
+import random
+import urllib.parse
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from playwright.sync_api import sync_playwright
 
@@ -36,8 +38,23 @@ def generate_plots():
         page = browser.new_page()
         page.set_viewport_size({"width": 600, "height": 448})
         
+        # Dynamic Color Selection
+        COLORS = [
+            "#4c78a8", # Ocean Blue (Original)
+            "#fc4c02", # Strava Orange
+            "#59a14f", # Forest Green
+            "#e15759", # Berry Red
+            "#9c755f", # Brown
+            "#b07aa1", # Purple
+            "#76b7b2", # Teal
+            "#f28e2b", # Orange
+        ]
+        selected_color = random.choice(COLORS)
+        encoded_color = urllib.parse.quote(selected_color)
+        print(f"Selected Theme Color: {selected_color}")
+
         # Plot 1: Monthly Distance
-        url = f"http://localhost:{PORT}/plots/templates/monthly_distance.html"
+        url = f"http://localhost:{PORT}/plots/templates/monthly_distance.html?color={encoded_color}"
         print(f"Generating {url}...")
         page.goto(url)
         # Wait for chart content (assuming D3 renders inside #chart SVG)
@@ -51,7 +68,7 @@ def generate_plots():
             print(f"Error generating monthly_distance: {e}")
 
         # Plot 2: Trailing 365
-        url = f"http://localhost:{PORT}/plots/templates/trailing_365.html"
+        url = f"http://localhost:{PORT}/plots/templates/trailing_365.html?color={encoded_color}"
         print(f"Generating {url}...")
         page.goto(url)
         try:
@@ -63,7 +80,7 @@ def generate_plots():
             print(f"Error generating trailing_365: {e}")
 
         # Plot 3: Pace vs Distance
-        url = f"http://localhost:{PORT}/plots/templates/pace_vs_distance.html"
+        url = f"http://localhost:{PORT}/plots/templates/pace_vs_distance.html?color={encoded_color}"
         print(f"Generating {url}...")
         page.goto(url)
         try:
@@ -75,7 +92,7 @@ def generate_plots():
             print(f"Error generating pace_vs_distance: {e}")
 
         # Plot 4: Weekly Heatmap
-        url = f"http://localhost:{PORT}/plots/templates/weekly_heatmap.html"
+        url = f"http://localhost:{PORT}/plots/templates/weekly_heatmap.html?color={encoded_color}"
         print(f"Generating {url}...")
         page.goto(url)
         try:
@@ -87,7 +104,7 @@ def generate_plots():
             print(f"Error generating weekly_heatmap: {e}")
 
         # Plot 5: Latest Run Map
-        url = f"http://localhost:{PORT}/plots/templates/latest_run.html"
+        url = f"http://localhost:{PORT}/plots/templates/latest_run.html?color={encoded_color}"
         print(f"Generating {url}...")
         page.goto(url)
         try:
@@ -99,7 +116,7 @@ def generate_plots():
             print(f"Error generating latest_run: {e}")
 
         # Plot 6: Personal Records (All Time)
-        url = f"http://localhost:{PORT}/plots/templates/personal_records.html"
+        url = f"http://localhost:{PORT}/plots/templates/personal_records.html?color={encoded_color}"
         print(f"Generating {url}...")
         page.goto(url)
         try:
@@ -111,7 +128,7 @@ def generate_plots():
             print(f"Error generating personal_records: {e}")
 
         # Plot 7: Area Map (All Time)
-        url = f"http://localhost:{PORT}/plots/templates/area_map.html"
+        url = f"http://localhost:{PORT}/plots/templates/area_map.html?color={encoded_color}"
         print(f"Generating {url}...")
         page.goto(url)
         try:
@@ -142,7 +159,7 @@ def generate_plots():
         for year in years:
             print(f"Generating plots for {year}...")
             for template, output_fmt in yearly_templates:
-                url = f"http://localhost:{PORT}/plots/templates/{template}?year={year}"
+                url = f"http://localhost:{PORT}/plots/templates/{template}?year={year}&color={encoded_color}"
                 output_name = output_fmt.format(year=year)
                 print(f"Generating {url} -> {output_name}...")
                 

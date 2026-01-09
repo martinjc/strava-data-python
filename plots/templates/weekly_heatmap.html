@@ -33,6 +33,10 @@
         const innerWidth = width - margin.left - margin.right;
         const innerHeight = height - margin.top - margin.bottom;
 
+        // Dynamic Color
+        const params = new URLSearchParams(window.location.search);
+        const themeColor = params.get("color") || "#4c78a8";
+
         const svg = d3.select("#chart")
             .append("svg")
             .attr("width", width)
@@ -43,10 +47,12 @@
             .attr("transform", `translate(${margin.left},${margin.top})`);
 
         // Title
+        // Title
         svg.append("text")
             .attr("class", "title")
             .attr("x", margin.left)
             .attr("y", 40)
+            .attr("fill", themeColor)
             .text("Weekly Distance Heatmap - all time");
 
         d3.json("/data/activities.json").then(data => {
@@ -101,7 +107,7 @@
                 .padding(0.05);
 
             // Color
-            const color = d3.scaleSequential(d3.interpolateBlues)
+            const color = d3.scaleSequential(d3.interpolateRgb("white", themeColor))
                 .domain([0, maxDistance]);
 
             // Render Cells

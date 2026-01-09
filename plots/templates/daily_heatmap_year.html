@@ -24,6 +24,7 @@
     <script>
         const params = new URLSearchParams(window.location.search);
         const targetYear = parseInt(params.get("year"));
+        const themeColor = params.get("color") || "#4c78a8";
 
         const width = 600;
         const height = 448;
@@ -42,10 +43,12 @@
             .attr("transform", `translate(${margin.left},${margin.top})`);
 
         // Title
+        // Title
         svg.append("text")
             .attr("class", "title")
             .attr("x", margin.left)
             .attr("y", 40) // Standard title position
+            .attr("fill", themeColor)
             .text(targetYear ? `Daily distance - ${targetYear}` : "Daily distance");
 
         if (targetYear) {
@@ -90,7 +93,7 @@
                 const rowGap = cellSize * 3; // Gap between half-years
 
                 // Color
-                const color = d3.scaleSequential(d3.interpolateBlues)
+                const color = d3.scaleSequential(d3.interpolateRgb("white", themeColor))
                     .domain([0, maxDistance || 10]);
 
                 const gridData = daysInYear.map(d => {

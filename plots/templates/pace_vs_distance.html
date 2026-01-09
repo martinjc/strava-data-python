@@ -8,7 +8,6 @@
     <link rel="stylesheet" href="style.css">
     <style>
         .dot {
-            fill: #4c78a8;
             opacity: 0.6;
         }
     </style>
@@ -22,6 +21,10 @@
         const margin = { top: 60, right: 30, bottom: 40, left: 50 };
         const innerWidth = width - margin.left - margin.right;
         const innerHeight = height - margin.top - margin.bottom;
+
+        // Dynamic Color
+        const params = new URLSearchParams(window.location.search);
+        const themeColor = params.get("color") || "#4c78a8";
 
         const svg = d3.select("#chart")
             .append("svg")
@@ -37,6 +40,7 @@
             .attr("class", "title")
             .attr("x", margin.left)
             .attr("y", 40)
+            .attr("fill", themeColor)
             .text("Pace vs Distance - all time");
 
         // Y Axis Label
@@ -114,6 +118,7 @@
                 .data(runs)
                 .enter().append("circle")
                 .attr("class", "dot")
+                .attr("fill", themeColor)
                 .attr("cx", d => x(d.distance))
                 .attr("cy", d => y(d.pace))
                 .attr("r", 3);

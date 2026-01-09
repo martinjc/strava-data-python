@@ -7,9 +7,7 @@
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <link rel="stylesheet" href="style.css">
     <style>
-        .bar {
-            fill: #4c78a8;
-        }
+        /* .bar fill set dynamically in JS */
     </style>
 </head>
 
@@ -24,6 +22,9 @@
         const innerHeight = height - margin.top - margin.bottom;
 
         // Create SVG
+        const params = new URLSearchParams(window.location.search);
+        const themeColor = params.get("color") || "#4c78a8";
+
         const svg = d3.select("#chart")
             .append("svg")
             .attr("width", width)
@@ -37,7 +38,12 @@
         svg.append("text")
             .attr("class", "title")
             .attr("x", margin.left)
+        // Add Title
+        svg.append("text")
+            .attr("class", "title")
+            .attr("x", margin.left)
             .attr("y", 40) // Position in top margin
+            .attr("fill", themeColor)
             .text("Distance per month - all time");
 
         // Y Axis Label
@@ -110,6 +116,7 @@
                 .data(processedData)
                 .join("rect")
                 .attr("class", "bar")
+                .attr("fill", themeColor)
                 .attr("x", d => x(d.date))
                 .attr("y", d => y(d.distance))
                 .attr("width", x.bandwidth())

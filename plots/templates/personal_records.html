@@ -24,7 +24,7 @@
             text-align: left;
             border-bottom: 2px solid #ccc;
             padding: 5px;
-            color: #666;
+            /* color set dynamically */
             text-transform: uppercase;
         }
 
@@ -69,6 +69,10 @@
     <script>
         const params = new URLSearchParams(window.location.search);
         const targetYear = parseInt(params.get("year"));
+        const themeColor = params.get("color") || "#666";
+
+        // Apply Theme Color to Headers
+        d3.selectAll("th").style("color", themeColor);
 
         // Update Title
         if (targetYear) {
@@ -76,6 +80,7 @@
         } else {
             d3.select("#page-title").text(`Personal Records - All Time`);
         }
+        d3.select("#page-title").style("color", themeColor);
 
         d3.json("/data/activities.json").then(data => {
             const parseDate = d3.utcParse("%Y-%m-%dT%H:%M:%SZ");

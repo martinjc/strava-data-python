@@ -7,14 +7,12 @@
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <link rel="stylesheet" href="style.css">
     <style>
-        .bar {
-            fill: #4c78a8;
-        }
-
         .axis line,
         .axis path {
             stroke: #000;
         }
+
+        /* .bar fill set dynamically in JS */
     </style>
 </head>
 
@@ -22,8 +20,10 @@
     <div id="chart"></div>
     <script>
         // Get Year from URL
+        // Get Year from URL
         const params = new URLSearchParams(window.location.search);
         const targetYear = parseInt(params.get("year"));
+        const themeColor = params.get("color") || "#4c78a8";
 
         const width = 600;
         const height = 448;
@@ -44,7 +44,11 @@
         svg.append("text")
             .attr("class", "title")
             .attr("x", margin.left)
+        svg.append("text")
+            .attr("class", "title")
+            .attr("x", margin.left)
             .attr("y", 40)
+            .attr("fill", themeColor)
             .text(targetYear ? `Distance per month - ${targetYear}` : "Distance per month");
 
         // Y Axis Label
@@ -101,6 +105,7 @@
                     .data(processedData)
                     .join("rect")
                     .attr("class", "bar")
+                    .attr("fill", themeColor)
                     .attr("x", d => x(d.date))
                     .attr("y", d => y(d.distance))
                     .attr("width", x.bandwidth())

@@ -36,7 +36,7 @@
 
         .route-path {
             fill: none;
-            stroke: #fc4c02;
+            /* Stroke set dynamically */
             stroke-width: 1.5px;
             stroke-opacity: 0.3;
             /* Low opacity to show density */
@@ -74,6 +74,7 @@
     <script>
         const params = new URLSearchParams(window.location.search);
         const targetYear = parseInt(params.get("year"));
+        const themeColor = params.get("color") || "#fc4c02";
 
         // Bounding Box
         // [[-3.32322, 51.38586], [-3.14065, 51.51634]]
@@ -109,7 +110,9 @@
             };
         }
 
-        d3.select("#page-title").text(targetYear ? `Cardiff Runs - ${targetYear}` : "Cardiff Runs - All Time");
+        d3.select("#page-title")
+            .text(targetYear ? `Cardiff Runs - ${targetYear}` : "Cardiff Runs - All Time")
+            .style("color", themeColor);
 
         d3.json("/data/activities.json").then(data => {
             const parseDate = d3.utcParse("%Y-%m-%dT%H:%M:%SZ");
@@ -202,6 +205,7 @@
                     svg.append("path")
                         .datum(geojson)
                         .attr("class", "route-path")
+                        .attr("stroke", themeColor)
                         .attr("d", path);
                 });
             } else {

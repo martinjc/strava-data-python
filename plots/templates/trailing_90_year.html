@@ -9,7 +9,6 @@
     <style>
         .line {
             fill: none;
-            stroke: #4c78a8;
             stroke-width: 1.5;
         }
 
@@ -25,6 +24,7 @@
     <script>
         const params = new URLSearchParams(window.location.search);
         const targetYear = parseInt(params.get("year"));
+        const themeColor = params.get("color") || "#4c78a8";
 
         const width = 600;
         const height = 448;
@@ -45,6 +45,7 @@
             .attr("class", "title")
             .attr("x", margin.left)
             .attr("y", 40)
+            .attr("fill", themeColor)
             .text(targetYear ? `Trailing 90 day distance - ${targetYear}` : "Trailing 90 day distance");
 
         svg.append("text")
@@ -123,6 +124,7 @@
                 g.append("path")
                     .datum(rollingData)
                     .attr("class", "line")
+                    .attr("stroke", themeColor)
                     .attr("d", line);
 
                 // Axes

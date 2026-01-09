@@ -40,8 +40,7 @@
 
         .route-path {
             fill: none;
-            stroke: #fc4c02;
-            /* Strava Orange */
+            /* Stroke set dynamically */
             stroke-width: 3px;
             stroke-linecap: round;
             stroke-linejoin: round;
@@ -139,6 +138,10 @@
             };
         }
 
+        // Dynamic Color
+        const params = new URLSearchParams(window.location.search);
+        const themeColor = params.get("color") || "#fc4c02"; // Default orange for maps
+
         d3.json("/data/activities.json").then(data => {
 
             // Find latest run
@@ -148,12 +151,12 @@
 
             const latestRun = runs[0];
             if (!latestRun) {
-                d3.select("#run-title").text("No runs found");
+                d3.select("#run-title").text("No runs found").style("color", themeColor);
                 return;
             }
 
             // Populate Text
-            d3.select("#run-title").text(latestRun.name);
+            d3.select("#run-title").text(latestRun.name).style("color", themeColor);
 
             // Stats
             const statsDiv = d3.select("#stats");
@@ -220,6 +223,7 @@
                 svg.append("path")
                     .datum(geojson)
                     .attr("class", "route-path")
+                    .attr("stroke", themeColor)
                     .attr("d", path);
             } else {
                 svg.append("text")
