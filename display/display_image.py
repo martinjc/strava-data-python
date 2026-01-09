@@ -34,7 +34,7 @@ def generate_new_quote():
         print(f"Error generating quote: {e}")
         return None
 
-def display_image(inky, image_path, saturation=0.5):
+def display_image(inky, image_path, saturation=1.0):
     """Displays the image at image_path on the inky display."""
     print(f"Displaying: {os.path.basename(image_path)}")
     try:
