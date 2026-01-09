@@ -8,7 +8,7 @@
 
 “I don’t run to add days to my life, I run to add life to my days.” —Ronald Rook
 
-“Good things come slow—especially in distance running.” —Bill Dellinger 
+“Good things come slow, especially in distance running.” —Bill Dellinger 
 
 “I often hear someone say, ‘I’m not a real runner.’ We are all runners, some just run faster than others. I never met a fake runner.” —Bart Yasso
 
