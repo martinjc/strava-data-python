@@ -56,7 +56,7 @@
 
 “We all have bad days and bad workouts, when running gets ugly, when split times seem slow, when you wonder why you started. It will pass.” —Hal Higdon
 
-“You are truly your own hero in running. It is up to you to have the responsibility and self–discipline to get the job done.” – Adam Goucher
+“You are truly your own hero in running. It is up to you to have the responsibility and self discipline to get the job done.” –Adam Goucher
 
 “I’ve learned that it’s what you do with the miles, rather than how many you’ve run” —Rod DeHaven
 
