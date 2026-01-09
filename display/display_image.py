@@ -12,7 +12,7 @@ from PIL import Image
 from inky.auto import auto
 
 # Configuration
-DISPLAY_DURATION = 300  # 5 minutes
+DISPLAY_DURATION = 180  # 3 minutes
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PLOTS_DIR = os.path.join(ROOT_DIR, 'plots', 'output')
 QUOTE_GENERATOR = os.path.join(ROOT_DIR, 'plots', 'generate_quote.py')
