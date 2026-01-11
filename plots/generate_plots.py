@@ -29,25 +29,24 @@ def generate_plots():
     # Start server in a thread
     server_thread = threading.Thread(target=run_server, daemon=True)
     server_thread.start()
-    
+
     # Allow server to start
     time.sleep(1)
-    
+
     with sync_playwright() as p:
         browser = p.chromium.launch()
         page = browser.new_page()
         page.set_viewport_size({"width": 600, "height": 448})
-        
+
         # Dynamic Color Selection
         COLORS = [
-            "#4c78a8", # Ocean Blue (Original)
+            "#a02020", # Red
+            "#f0e050", # Yellow
+            "#608050", # Green
+            "#5080b8", # Blue
             "#fc4c02", # Strava Orange
             "#59a14f", # Forest Green
             "#e15759", # Berry Red
-            "#9c755f", # Brown
-            "#b07aa1", # Purple
-            "#76b7b2", # Teal
-            "#f28e2b", # Orange
         ]
         selected_color = random.choice(COLORS)
         encoded_color = urllib.parse.quote(selected_color)
@@ -61,7 +60,7 @@ def generate_plots():
         try:
             page.wait_for_selector("#chart svg g rect", timeout=5000) # Wait for at least one bar
             # Wait a bit more for layout/fonts
-            time.sleep(0.5) 
+            time.sleep(0.5)
             page.screenshot(path=os.path.join(OUTPUT_DIR, "monthly_distance.png"))
             print("Saved monthly_distance.png")
         except Exception as e:
@@ -143,9 +142,9 @@ def generate_plots():
         import datetime
         current_year = datetime.datetime.now().year
         prev_year = current_year - 1
-        
+
         years = [current_year, prev_year]
-        
+
         # New Templates to generate
         yearly_templates = [
             ("monthly_distance_year.html", "monthly_distance_{year}.png"),
@@ -155,18 +154,18 @@ def generate_plots():
             ("personal_records.html", "personal_records_{year}.png"),
             ("area_map.html", "area_map_{year}.png")
         ]
-        
+
         for year in years:
             print(f"Generating plots for {year}...")
             for template, output_fmt in yearly_templates:
                 url = f"http://localhost:{PORT}/plots/templates/{template}?year={year}&color={encoded_color}"
                 output_name = output_fmt.format(year=year)
                 print(f"Generating {url} -> {output_name}...")
-                
+
                 try:
                     page.goto(url)
                     # Generic wait (using table for PRs, svg for others)
-                    page.wait_for_selector("#chart", timeout=5000) 
+                    page.wait_for_selector("#chart", timeout=5000)
                     time.sleep(0.5)
                     page.screenshot(path=os.path.join(OUTPUT_DIR, output_name))
                     print(f"Saved {output_name}")
