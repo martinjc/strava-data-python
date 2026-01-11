@@ -41,12 +41,9 @@ def generate_plots():
         # Dynamic Color Selection
         COLORS = [
             "#a02020", # Red
-            "#f0e050", # Yellow
             "#608050", # Green
             "#5080b8", # Blue
             "#fc4c02", # Strava Orange
-            "#59a14f", # Forest Green
-            "#e15759", # Berry Red
         ]
         selected_color = random.choice(COLORS)
         encoded_color = urllib.parse.quote(selected_color)
