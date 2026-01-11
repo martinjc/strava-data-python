@@ -11,7 +11,7 @@ body {
 }
 
 .title {
-    font-size: 24px;
+    font-size: 36px;
     font-weight: bold;
     font-family: sans-serif;
 }
@@ -19,6 +19,6 @@ body {
 .x-axis text,
 .y-axis text,
 .axis text {
-    font-size: 10px;
+    font-size: 18px;
     fill: #333;
 }

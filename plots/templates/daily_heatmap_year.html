@@ -137,7 +137,7 @@
                         .attr("x", -5)
                         .attr("y", (d, i) => yOffset + i * (cellSize + 1) + cellSize / 1.5)
                         .style("text-anchor", "end")
-                        .style("font-size", "9px")
+                        .style("font-size", "12px")
                         .text(d => d);
                 }
 
@@ -161,7 +161,7 @@
                         const yOffset = topPadding + rowIdx * (7 * (cellSize + 1) + rowGap);
                         return yOffset - 5;
                     })
-                    .style("font-size", "10px")
+                    .style("font-size", "12px")
                     .style("font-weight", "bold")
                     .text(d3.timeFormat("%b"));
 

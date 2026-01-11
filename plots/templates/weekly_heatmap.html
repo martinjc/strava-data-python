@@ -13,13 +13,17 @@
         }
 
         .axis text {
-            font-size: 10px;
+            font-size: 14px;
             fill: #333;
         }
 
         .axis line,
         .axis path {
             display: none;
+        }
+
+        .title {
+            font-size: 32px;
         }
     </style>
 </head>
@@ -50,7 +54,7 @@
         // Title
         svg.append("text")
             .attr("class", "title")
-            .attr("x", margin.left)
+            .attr("x", 20)
             .attr("y", 40)
             .attr("fill", themeColor)
             .text("Weekly Distance Heatmap - all time");
@@ -102,7 +106,7 @@
                 .range([0, innerHeight]) // Top to bottom (minYear at top)
                 // Wait, typically calendars show reverse chronological? Or chronological?
                 // Let's do standard list: Min Year at Top or Bottom?
-                // Usually heatmaps: Top row = Year 1, Bottom = Year N. 
+                // Usually heatmaps: Top row = Year 1, Bottom = Year N.
                 // Let's put MinYear at Top.
                 .padding(0.05);
 

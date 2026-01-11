@@ -16,12 +16,12 @@
         .content-container {
             display: flex;
             position: absolute;
-            top: 80px;
+            top: 100px;
             left: 30px;
             width: 540px;
             /* 600 - 30 - 30 */
-            height: 338px;
-            /* 448 - 80 - 30 */
+            height: 318px;
+            /* 448 - 100 - 30 */
         }
 
         .map-container {
@@ -194,7 +194,7 @@
             // Description (if exists)
             // Note: Strava API might not return 'description' unless detailed view, or if missing.
             // Check if user has description/comment
-            // API field often used is 'description' or 'name' (already used). 
+            // API field often used is 'description' or 'name' (already used).
             // In list view, sometimes description is not present. We'll check.
             if (latestRun.description) {
                 statsDiv.append("div").attr("class", "run-description")

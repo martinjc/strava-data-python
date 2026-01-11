@@ -9,7 +9,7 @@
     <style>
         .table-container {
             position: absolute;
-            top: 70px;
+            top: 90px;
             left: 30px;
             width: 540px;
         }
@@ -17,7 +17,7 @@
         table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 11px;
+            font-size: 16px;
         }
 
         th {
@@ -105,7 +105,7 @@
             // Let's use 2% tolerance.
 
             const buckets = [
-                { name: "1 Mile", dist: 1609.34, tolerance: 0.05 }, // 5% for mile 
+                { name: "1 Mile", dist: 1609.34, tolerance: 0.05 }, // 5% for mile
                 { name: "3 km", dist: 3000, tolerance: 0.02 },
                 { name: "5 km", dist: 5000, tolerance: 0.02 }, // Strava usually matches 5k pretty tightly
                 { name: "5 Miles", dist: 8046.72, tolerance: 0.02 },
@@ -139,7 +139,7 @@
 
                     const speedKmh = (pr.average_speed * 3.6).toFixed(1); // m/s to km/h
                     const paceMinKm = 1000 / (pr.average_speed * 60); // min/km
-                    // Wait, average_speed is m/s. 
+                    // Wait, average_speed is m/s.
                     // 1 / (speed/1000) sec/km = 1000/speed sec/km.
                     // pace = (1000/speed)/60 min/km
                     // Easier: timeMin / distKm

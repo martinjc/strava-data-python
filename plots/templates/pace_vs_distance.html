@@ -18,7 +18,7 @@
     <script>
         const width = 600;
         const height = 448;
-        const margin = { top: 60, right: 30, bottom: 40, left: 50 };
+        const margin = { top: 60, right: 30, bottom: 60, left: 70 };
         const innerWidth = width - margin.left - margin.right;
         const innerHeight = height - margin.top - margin.bottom;
 
@@ -49,7 +49,7 @@
             .attr("y", 15)
             .attr("x", -(height / 2))
             .style("text-anchor", "middle")
-            .style("font-size", "10px")
+            .style("font-size", "18px")
             .text("Pace (min/km)");
 
         // X Axis Label
@@ -57,7 +57,7 @@
             .attr("x", width / 2)
             .attr("y", height - 5)
             .style("text-anchor", "middle")
-            .style("font-size", "10px")
+            .style("font-size", "18px")
             .text("Distance (km)");
 
         d3.json("/data/activities.json").then(data => {
@@ -92,7 +92,7 @@
             // Faster pace = Lower number (e.g. 4 min/km is faster than 6 min/km).
             // So we want Lower Numbers at the Top (y=0) and Higher Numbers at Bottom (y=height).
 
-            // If range is [0, innerHeight]: 
+            // If range is [0, innerHeight]:
             // input min pace -> 0 (Top)
             // input max pace -> innerHeight (Bottom)
             // This is exactly what we want.

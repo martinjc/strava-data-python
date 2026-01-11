@@ -29,7 +29,7 @@
     <script>
         const width = 600;
         const height = 448;
-        const margin = { top: 60, right: 30, bottom: 40, left: 50 };
+        const margin = { top: 60, right: 30, bottom: 40, left: 70 };
         const innerWidth = width - margin.left - margin.right;
         const innerHeight = height - margin.top - margin.bottom;
 
@@ -48,7 +48,7 @@
 
         svg.append("text")
             .attr("class", "title")
-            .attr("x", margin.left)
+            .attr("x", 10)
             .attr("y", 40)
             .attr("fill", themeColor)
             .text("Trailing 365 day distance - all time");
@@ -58,7 +58,7 @@
             .attr("y", 15)
             .attr("x", -(height / 2))
             .style("text-anchor", "middle")
-            .style("font-size", "10px")
+            .style("font-size", "16px")
             .text("Distance (km)");
 
         d3.json("/data/activities.json").then(data => {
@@ -100,7 +100,7 @@
             const rollingData = [];
 
             // Optimization: Sliding window sum
-            // However, dates might not be perfectly continuous if range logic failed? 
+            // However, dates might not be perfectly continuous if range logic failed?
             // d3.timeDay.range ensures continuity.
 
             let currentSum = 0;
@@ -108,7 +108,7 @@
             // "so the total distance covered in the 365 days prior to each date"
 
             // We can pre-calculate sums or use a loop.
-            // window is [i - 365, i]. 
+            // window is [i - 365, i].
 
             for (let i = 0; i < dailyData.length; i++) {
                 currentSum += dailyData[i].distance;
