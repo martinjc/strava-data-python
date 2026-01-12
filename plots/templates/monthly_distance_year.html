@@ -51,15 +51,6 @@
             .attr("fill", themeColor)
             .text(targetYear ? `Distance per month - ${targetYear}` : "Distance per month");
 
-        // Y Axis Label
-        svg.append("text")
-            .attr("transform", "rotate(-90)")
-            .attr("y", 15)
-            .attr("x", -(height / 2))
-            .style("text-anchor", "middle")
-            .style("font-size", "18px")
-            .text("Distance (km)");
-
         if (!targetYear) {
             svg.append("text").attr("x", 100).attr("y", 100).text("No year specified (?year=YYYY)");
         } else {

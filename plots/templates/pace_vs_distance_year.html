@@ -43,23 +43,6 @@
             .attr("fill", themeColor)
             .text(targetYear ? `Pace vs Distance - ${targetYear}` : "Pace vs Distance");
 
-        // Y Axis Label
-        svg.append("text")
-            .attr("transform", "rotate(-90)")
-            .attr("y", 15)
-            .attr("x", -(height / 2))
-            .style("text-anchor", "middle")
-            .style("font-size", "18px")
-            .text("Pace (min/km)");
-
-        // X Axis Label
-        svg.append("text")
-            .attr("x", width / 2)
-            .attr("y", height - 5)
-            .style("text-anchor", "middle")
-            .style("font-size", "18px")
-            .text("Distance (km)");
-
         if (targetYear) {
             d3.json("/data/activities.json").then(data => {
 

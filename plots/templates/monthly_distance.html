@@ -46,15 +46,6 @@
             .attr("fill", themeColor)
             .text("Distance per month - all time");
 
-        // Y Axis Label
-        svg.append("text")
-            .attr("transform", "rotate(-90)")
-            .attr("y", 15)
-            .attr("x", -(height / 2))
-            .style("text-anchor", "middle")
-            .style("font-size", "18px")
-            .text("Distance (km)");
-
         // Fetch Data
         d3.json("/data/activities.json").then(data => {
             // Process Data
