@@ -52,7 +52,7 @@ def display_image(inky, image_path, saturation=1.0):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--saturation", "-s", type=float, default=0.5, help="Colour palette saturation")
+    parser.add_argument("--saturation", "-s", type=float, default=0.7, help="Colour palette saturation")
     args, _ = parser.parse_known_args()
     
     try:
