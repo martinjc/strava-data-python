@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Latest Run</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .title {
+            position: absolute;
+            top: 40px;
+            left: 30px;
+        }
+
+        .content-container {
+            display: flex;
+            position: absolute;
+            top: 100px;
+            left: 30px;
+            width: 540px;
+            /* 600 - 30 - 30 */
+            height: 318px;
+            /* 448 - 100 - 30 */
+        }
+
+        .map-container {
+            flex: 1;
+            /* border: 1px solid #eee; */
+        }
+
+        .stats-container {
+            flex: 0 0 200px;
+            /* Fixed width for stats */
+            padding-left: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+        }
+
+        .route-path {
+            fill: none;
+            /* Stroke set dynamically */
+            stroke-width: 3px;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .stat-item {
+            margin-bottom: 20px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .run-description {
+            font-size: 14px;
+            color: #555;
+            font-style: italic;
+            margin-top: 10px;
+            line-height: 1.4;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="chart">
+        <div class="title" id="run-title">Latest Run</div>
+        <div class="content-container">
+            <div class="map-container" id="map"></div>
+            <div class="stats-container" id="stats">
+            </div>
+        </div>
+    </div>
+    <script>
+        // Polyline Decoder function
+        // Source: https://github.com/mapbox/polyline/blob/master/src/polyline.js
+        function decode(str, precision) {
+            var index = 0,
+                lat = 0,
+                lng = 0,
+                coordinates = [],
+                shift = 0,
+                result = 0,
+                byte = null,
+                latitude_change,
+                longitude_change,
+                factor = Math.pow(10, precision || 5);
+
+            while (index < str.length) {
+                byte = null;
+                shift = 0;
+                result = 0;
+
+                do {
+                    byte = str.charCodeAt(index++) - 63;
+                    result |= (byte & 0x1f) << shift;
+                    shift += 5;
+                } while (byte >= 0x20);
+
+                latitude_change = ((result & 1) ? ~(result >> 1) : (result >> 1));
+
+                shift = result = 0;
+
+                do {
+                    byte = str.charCodeAt(index++) - 63;
+                    result |= (byte & 0x1f) << shift;
+                    shift += 5;
+                } while (byte >= 0x20);
+
+                longitude_change = ((result & 1) ? ~(result >> 1) : (result >> 1));
+
+                lat += latitude_change;
+                lng += longitude_change;
+
+                coordinates.push([lat / factor, lng / factor]);
+            }
+
+            return coordinates;
+        }
+
+        // To GeoJSON LineString (note: GeoJSON is [lng, lat], polyline is [lat, lng])
+        function toGeoJSON(str) {
+            const coords = decode(str);
+            return {
+                type: "LineString",
+                coordinates: coords.map(c => [c[1], c[0]])
+            };
+        }
+
+        // Dynamic Color
+        const params = new URLSearchParams(window.location.search);
+        const themeColor = params.get("color") || "#fc4c02"; // Default orange for maps
+
+        d3.json("/data/activities.json").then(data => {
+
+            // 1. Filter for Runs
+            const runs = data.filter(d => d.type === "Run");
+
+            // 2. Determine "Today" (ignoring year)
+            const today = new Date();
+            const todayMonth = today.getMonth(); // 0-11
+            const todayDate = today.getDate();   // 1-31
+            const currentYear = today.getFullYear();
+
+            // 3. Find Matches in Previous Years
+            // Strategy: Exact date match first. If none, widen window.
+
+            let candidates = [];
+
+            // Exact Match check
+            candidates = runs.filter(d => {
+                const dDate = new Date(d.start_date);
+                return dDate.getFullYear() < currentYear && // Previous years only
+                    dDate.getMonth() === todayMonth &&
+                    dDate.getDate() === todayDate;
+            });
+
+            // If no exact matches, look for "nearby" (e.g. +/- 7 days)
+            if (candidates.length === 0) {
+                // We'll iterate all runs and check day difference
+                // Simple approach: Check day distance Day-of-Year driven? 
+                // Or just loop and check difference in absolute days ignoring year?
+                // Easier: Just look for runs in same month +/- 1 month?
+
+                // Let's do +/- 7 days window
+                const searchWindowDays = 7;
+
+                candidates = runs.filter(d => {
+                    const dDate = new Date(d.start_date);
+                    if (dDate.getFullYear() >= currentYear) return false;
+
+                    // Create a date for this run in the CURRENT year to compare with 'today'
+                    // This handles leap years roughly enough for this purpose
+                    const dThisYear = new Date(today.getFullYear(), dDate.getMonth(), dDate.getDate());
+
+                    // Diff in days
+                    const diffTime = Math.abs(today - dThisYear);
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                    return diffDays <= searchWindowDays;
+                });
+            }
+
+            if (candidates.length === 0) {
+                // If STILL nothing (unlikely for active runner), fallback to just random run from previous years?
+                // Or "No runs on this day in history"
+                candidates = runs.filter(d => new Date(d.start_date).getFullYear() < currentYear);
+            }
+
+            if (candidates.length === 0) {
+                d3.select("#run-title").text("No historical runs found").style("color", themeColor);
+                return;
+            }
+
+            // 4. Select Random Candidate
+            const selectedRun = candidates[Math.floor(Math.random() * candidates.length)];
+            const selectedYear = new Date(selectedRun.start_date).getFullYear();
+
+            // Populate Text
+            // Append Year to Title
+            d3.select("#run-title").text(`${selectedRun.name} (${selectedYear})`).style("color", themeColor);
+
+            // Stats
+            const statsDiv = d3.select("#stats");
+
+            // Date
+            const dateObj = new Date(selectedRun.start_date);
+            const dateStr = dateObj.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            const timeStr = dateObj.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+
+            statsDiv.append("div").attr("class", "stat-item")
+                .html(`<div class="stat-label">Date</div><div class="stat-value" style="font-size: 16px;">${dateStr} ${timeStr}</div>`);
+
+            // Distance
+            const distKm = (selectedRun.distance / 1000).toFixed(2);
+            statsDiv.append("div").attr("class", "stat-item")
+                .html(`<div class="stat-label">Distance</div><div class="stat-value">${distKm} <span style="font-size:14px; font-weight:normal;">km</span></div>`);
+
+            // Pace
+            const timeMin = selectedRun.moving_time / 60.0;
+            const paceDec = timeMin / (selectedRun.distance / 1000);
+            const m = Math.floor(paceDec);
+            const s = Math.round((paceDec - m) * 60);
+            const paceStr = `${m}:${s < 10 ? "0" + s : s}`;
+            statsDiv.append("div").attr("class", "stat-item")
+                .html(`<div class="stat-label">Avg Pace</div><div class="stat-value">${paceStr} <span style="font-size:14px; font-weight:normal;">/km</span></div>`);
+
+            // Time
+            const h = Math.floor(timeMin / 60);
+            const mm = Math.floor(timeMin % 60);
+            const ss = Math.round((timeMin * 60) % 60);
+            const durStr = h > 0 ? `${h}h ${mm}m` : `${mm}m ${ss}s`;
+            statsDiv.append("div").attr("class", "stat-item")
+                .html(`<div class="stat-label">Time</div><div class="stat-value">${durStr}</div>`);
+
+            // Description
+            if (selectedRun.description) {
+                statsDiv.append("div").attr("class", "run-description")
+                    .text(selectedRun.description);
+            }
+
+            // Map
+            const mapContainer = d3.select("#map");
+            const width = mapContainer.node().getBoundingClientRect().width;
+            const height = mapContainer.node().getBoundingClientRect().height;
+
+            const svg = mapContainer.append("svg")
+                .attr("width", width)
+                .attr("height", height);
+
+            if (selectedRun.map && selectedRun.map.summary_polyline) {
+                const geojson = toGeoJSON(selectedRun.map.summary_polyline);
+
+                // Projection
+                const projection = d3.geoIdentity().reflectY(true);
+                const path = d3.geoPath(projection);
+
+                // Fit features
+                projection.fitExtent([[10, 10], [width - 10, height - 10]], geojson);
+
+                svg.append("path")
+                    .datum(geojson)
+                    .attr("class", "route-path")
+                    .attr("stroke", themeColor)
+                    .attr("d", path);
+            } else {
+                svg.append("text")
+                    .attr("x", width / 2)
+                    .attr("y", height / 2)
+                    .attr("text-anchor", "middle")
+                    .text("No map data");
+            }
+
+        }).catch(err => {
+            console.error(err);
+        });
+    </script>
+</body>
+
+</html>

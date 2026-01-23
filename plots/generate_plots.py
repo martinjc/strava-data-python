@@ -123,6 +123,18 @@ def generate_plots():
         except Exception as e:
             print(f"Error generating personal_records: {e}")
 
+        # Plot 8: On This Day (Historical Random)
+        url = f"http://localhost:{PORT}/plots/templates/on_this_day.html?color={encoded_color}"
+        print(f"Generating {url}...")
+        page.goto(url)
+        try:
+            # Wait for map or text failure
+            page.wait_for_timeout(2000) # Give JS time to calculate logic + render
+            page.screenshot(path=os.path.join(OUTPUT_DIR, "on_this_day.png"))
+            print("Saved on_this_day.png")
+        except Exception as e:
+            print(f"Error generating on_this_day: {e}")
+
         # Plot 7: Area Map (All Time)
         url = f"http://localhost:{PORT}/plots/templates/area_map.html?color={encoded_color}"
         print(f"Generating {url}...")
