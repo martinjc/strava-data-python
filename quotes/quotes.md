@@ -67,3 +67,8 @@
 “It was being a runner that mattered, not how fast or how far I could run. The joy was in the act of running and in the journey, not in the destination.” —John Bingham
 
 “If your legs are tired, run with your heart!” —Tobias Heinze.
+
+"Pain is inevitable. Suffering is optional. Say you’re running and you think, ‘Man, this hurts, I can’t take it anymore. The ‘hurt’ part is an unavoidable reality, but whether or not you can stand anymore is up to the runner himself" —Haruki Murakami
+
+"I'll be happy if running and I can grow old together" -Haruki Murakami
+
